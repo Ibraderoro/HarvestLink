@@ -12,3 +12,4 @@
 *.css text eol=lf
 *.jsx text eol=lf
 *.csx text eol=lf
+*.txt text eol=lf
