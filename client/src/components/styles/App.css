@@ -1,0 +1,51 @@
+/* App.css */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar ul {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+  padding: 0;
+}
+
+.navbar ul li a {
+  text-decoration: none;
+  color: blue;
+  padding: 8px 12px;
+  display: inline-block;
+}
+
+.navbar ul li a.active {
+  font-weight: bold;
+  color: darkblue;
+  border-bottom: 2px solid darkblue;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+}
+
+.search-bar input {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+.search-bar button {
+  padding: 6px 12px;
+  background-color: blue;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.search-bar button:hover {
+  background-color: darkblue;
+}
