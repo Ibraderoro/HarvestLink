@@ -5,41 +5,47 @@ const Product = require('../models/productModel');
 
 const OrderController = {
   // Function to place an order
+  const mongoose = require('mongoose');
+
   placeOrder: async (req, res) => {
     // Extract productId and quantity from the request body
     const { productId, quantity } = req.body;
+    const userId = req.user.userId; // Assuming userId is set in req.user by authentication middleware
+    const session = await mongoose.startSession();
+    session.startTransaction();
     console.log(
-      `Received order request for product ID: ${productId} with quantity: ${quantity}`
+      `Received request to place order for productId: ${productId}, quantity: ${quantity}`
     );
     try {
       // Find the product by its ID
       const product = await Product.findById(productId);
       console.log(`Product found: ${product}`);
       // If product not found, send a 404 error response
-      if (!product) {
-        console.log('Product not found.');
-        return res.status(404).json({ error: 'Product not found.' });
+      if (!product || product.quantity < quantity) {
+      //If product not found, abort transaction and send 400 error response
+        await session.abortTransaction();
+        return res.status(400).json({ error: 'Product unavailable.' });
       }
-      // Check if sufficient quantity is available
-      if (product.quantity < quantity) {
-        console.log('Insufficient quantity.');
-        return res.status(400).json({ error: 'Insufficient quantity.' });
-      }
+    
 
       // Deduct the ordered quantity from the product's stock
       product.quantity -= quantity;
       // Save the updated product to the database
-      await product.save();
+      await product.save({ session });
       console.log(`Product stock updated. New quantity: ${product.quantity}`);
       // Create a new order with the productId, quantity, and buyer information
-      const order = new Order({ productId, quantity, buyer: 'guest' });
+      const order = new Order({ productId, quantity, buyer: userId });
       // Save the new order to the database
-      await order.save();
+      await order.save({ session });
       console.log('Order placed successfully.');
 
       // Send a success message as a JSON response with status 201
+      await session.commitTransaction();
+      session.endSession();
       res.status(201).json({ message: 'Order placed successfully.' });
     } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
       console.error('An error occurred while placing the order:', error);
       // Send an error message as a JSON response with status 500
       res

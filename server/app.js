@@ -4,6 +4,11 @@ const orderRoutes = require('./routes/orderRoutes');
 const productRoutes = require('./routes/productRoutes');
 // Import the routes for handling user-related requests
 const userRoutes = require('./routes/userRoutes');
+//Import authentication routes
+const authRoutes = require('./routes/authRoutes');
+//Import helmet for security
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 // const cors = require('cors');
 // Import the Express.js framework
 const express = require('express');
@@ -17,6 +22,16 @@ app.use(express.json());
 //     origin: 'http://localhost:3001',
 //   })
 // ); // Allow requests from your React app
+// Set security HTTP headers
+app.use(helmet());
+// Rate limiting middleware to limit repeated requests to public APIs
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
+// Use the authentication routes for requests to /auth
+app.use('/api/auth', authRoutes);
 // Use the order routes for requests to /orders
 app.use('/api/orders', orderRoutes);
 

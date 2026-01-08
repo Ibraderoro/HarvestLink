@@ -24,8 +24,5 @@ router.put('/:id', productController.updateProduct);
 // Define a DELETE route to delete a product by its ID
 router.delete('/:id', productController.deleteProduct);
 
-// Define a GET route to get all products
-router.get('/', productController.getProducts);
-
 // Export the router for use in other files
 module.exports = router;

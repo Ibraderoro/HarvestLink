@@ -18,6 +18,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'A user must have a role'],
   },
+  // Define the email field with type String and a required validation message
+  email: {
+    type: String,
+    required: [true, 'A user must have an email'],
+  },
+}, { timestamps: true
 });
 
 // Export the User model through module.exports

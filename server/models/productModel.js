@@ -21,7 +21,13 @@ const productSchema = new mongoose.Schema({
   image: {
     type: String,
     required: [true, 'A product must have an image']
+  },
+  // Define the description field with type String
+  description: {
+    type: String,
+    required: [true, 'A product must have a description']
   }
+}, { timestamps: true
 });
 
 // Export the Product model through module.exports
