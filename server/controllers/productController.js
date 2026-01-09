@@ -30,6 +30,7 @@ const ProductController = {
       const { id } = req.params;
       // Extract name, price, and quantity from the request body
       const { name, price, quantity, image } = req.body;
+      
       // Find the product by ID and update it with the new data
       const product = await Product.findByIdAndUpdate(id, req.body, {
         new: true,

@@ -14,11 +14,20 @@ const OrderController = {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    if (!productId || quantity <= 0) {
+    if (
+      !productId ||
+      quantity <= 0 ||
+      !mongoose.Types.ObjectId.isValid(productId)
+    ) {
       return res.status(400).json({ error: 'Invalid order data' });
     }
 
     const userId = req.user.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({ error: 'Invalid user session' });
+    }
+
     const session = await mongoose.startSession();
 
     try {
@@ -33,10 +42,12 @@ const OrderController = {
 
       // If product not found, throw an error
       if (!product) {
-        throw new Error('Product unavailable');
+        const error = new Error('Product unavailable');
+        error.statusCode = 400;
+        throw error;
       }
       // Create a new order with the productId, quantity, and buyer information
-      const order = await Order.create(
+      const [order] = await Order.create(
         [
           {
             productId,
@@ -52,7 +63,7 @@ const OrderController = {
       // Send a success message as a JSON response with status 201
       res.status(201).json({
         message: 'Order placed successfully',
-        order: order[0],
+        order,
       });
     } catch (error) {
       await session.abortTransaction();
@@ -60,7 +71,9 @@ const OrderController = {
       console.error('Order transaction failed:', error.message);
 
       // Send an error message as a JSON response with status 400
-      res.status(400).json({ error: error.message || 'Order failed' });
+      res
+        .status(error.statusCode || 500)
+        .json({ error: error.message || 'Order failed' });
     } finally {
       session.endSession();
     }
