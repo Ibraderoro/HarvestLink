@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 // Import the Order model from the OrderModel file
 const Order = require('../models/orderModel');
 // Import the Product model from the ProductModel file
@@ -5,52 +6,63 @@ const Product = require('../models/productModel');
 
 const OrderController = {
   // Function to place an order
-  const mongoose = require('mongoose');
-
   placeOrder: async (req, res) => {
     // Extract productId and quantity from the request body
     const { productId, quantity } = req.body;
-    const userId = req.user.userId; // Assuming userId is set in req.user by authentication middleware
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    console.log(
-      `Received request to place order for productId: ${productId}, quantity: ${quantity}`
-    );
-    try {
-      // Find the product by its ID
-      const product = await Product.findById(productId);
-      console.log(`Product found: ${product}`);
-      // If product not found, send a 404 error response
-      if (!product || product.quantity < quantity) {
-      //If product not found, abort transaction and send 400 error response
-        await session.abortTransaction();
-        return res.status(400).json({ error: 'Product unavailable.' });
-      }
-    
 
-      // Deduct the ordered quantity from the product's stock
-      product.quantity -= quantity;
-      // Save the updated product to the database
-      await product.save({ session });
-      console.log(`Product stock updated. New quantity: ${product.quantity}`);
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!productId || quantity <= 0) {
+      return res.status(400).json({ error: 'Invalid order data' });
+    }
+
+    const userId = req.user.userId;
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      // Find the product and update stock
+      const product = await Product.findOneAndUpdate(
+        { _id: productId, quantity: { $gte: quantity } },
+        { $inc: { quantity: -quantity } },
+        { new: true, session }
+      );
+
+      // If product not found, throw an error
+      if (!product) {
+        throw new Error('Product unavailable');
+      }
       // Create a new order with the productId, quantity, and buyer information
-      const order = new Order({ productId, quantity, buyer: userId });
-      // Save the new order to the database
-      await order.save({ session });
-      console.log('Order placed successfully.');
+      const order = await Order.create(
+        [
+          {
+            productId,
+            quantity,
+            buyer: userId,
+          },
+        ],
+        // Save the updated product to the database
+        { session }
+      );
+      await session.commitTransaction();
 
       // Send a success message as a JSON response with status 201
-      await session.commitTransaction();
-      session.endSession();
-      res.status(201).json({ message: 'Order placed successfully.' });
+      res.status(201).json({
+        message: 'Order placed successfully',
+        order: order[0],
+      });
     } catch (error) {
       await session.abortTransaction();
+
+      console.error('Order transaction failed:', error.message);
+
+      // Send an error message as a JSON response with status 400
+      res.status(400).json({ error: error.message || 'Order failed' });
+    } finally {
       session.endSession();
-      console.error('An error occurred while placing the order:', error);
-      // Send an error message as a JSON response with status 500
-      res
-        .status(500)
-        .json({ error: 'An error occurred while placing the order.' });
     }
   },
 };
