@@ -1,4 +1,5 @@
 // Import the Product model from the productModel file
+const mongoose = require('mongoose');
 const Product = require('../models/productModel');
 
 const ProductController = {
@@ -7,14 +8,17 @@ const ProductController = {
     try {
       // Extract name, price, and quantity from the request body
       const { name, price, quantity, image } = req.body;
+
+      if (!name || price <= 0 || quantity < 0) {
+        return res.status(400).json({ error: 'Invalid product data' });
+      }
       // Create a new product instance with the extracted data
-      const newProduct = new Product({ name, price, quantity, image });
-      // Save the new product to the database
-      const product = await newProduct.save();
+      const product = await Product.create({ name, price, quantity, image });
+
       // Log success message to the console
       console.log('Product added successfully.');
       // Send the created product as a JSON response with status 200
-      res.status(200).json(product);
+      res.status(201).json(product);
     } catch (err) {
       // Log error message to the console
       console.error('Error: Product cannot be added:', err);
@@ -30,10 +34,16 @@ const ProductController = {
       const { id } = req.params;
       // Extract name, price, and quantity from the request body
       const { name, price, quantity, image } = req.body;
-      
+
+      if (!mongoose.Types.OjectId.isValid(id)) {
+        return res.status(400).json({ error: 'Invalid product ID' });
+      }
+
+      const updates = { name, price, quantity, image };
       // Find the product by ID and update it with the new data
-      const product = await Product.findByIdAndUpdate(id, req.body, {
+      const product = await Product.findByIdAndUpdate(id, updates, {
         new: true,
+        runValidators: true,
       });
       // If the product is not found, send a 404 error response
       if (!product) {
@@ -56,6 +66,11 @@ const ProductController = {
     try {
       // Extract product ID from the request parameters
       const { id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ error: 'Invalid product ID.' });
+      }
+
       // Find the product by ID and delete it from the database
       const product = await Product.findByIdAndDelete(id);
       // If the product is not found, send a 404 error response
