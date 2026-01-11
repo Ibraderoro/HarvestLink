@@ -17,7 +17,7 @@ const ProductController = {
 
       // Log success message to the console
       console.log('Product added successfully.');
-      // Send the created product as a JSON response with status 200
+      // Send the created product as a JSON response with status 201
       res.status(201).json(product);
     } catch (err) {
       // Log error message to the console
@@ -35,16 +35,29 @@ const ProductController = {
       // Extract name, price, and quantity from the request body
       const { name, price, quantity, image } = req.body;
 
-      if (!mongoose.Types.OjectId.isValid(id)) {
+      if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({ error: 'Invalid product ID' });
       }
 
-      const updates = { name, price, quantity, image };
+      if (
+        (price !== undefined && price <= 0) ||
+        (quantity !== undefined && quantity < 0)
+      ) {
+        return res.status(400).json({ error: 'Invalid update data' });
+      }
+
+      const updates = {};
+      if (name !== undefined) updates.name = name;
+      if (price !== undefined) updates.price = price;
+      if (quantity !== undefined) updates.quantity = quantity;
+      if (image !== undefined) updates.image = image;
+
       // Find the product by ID and update it with the new data
       const product = await Product.findByIdAndUpdate(id, updates, {
         new: true,
         runValidators: true,
       });
+
       // If the product is not found, send a 404 error response
       if (!product) {
         return res.status(404).json({ error: 'Product not found.' });
@@ -58,6 +71,49 @@ const ProductController = {
       console.error('Error: Product cannot be updated:', err);
       // Send error message as a JSON response with status 500
       res.status(500).json({ error: err.message });
+    }
+  },
+  // Function to get all products
+  async getProducts(req, res) {
+    try {
+      const page = Math.max(parseInt(req.query.page) || 1, 1);
+      const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+
+      const skip = (page - 1) * limit;
+
+      const { minPrice, maxPrice, search } = req.query;
+
+      const query = {};
+
+      // Price filtering
+      if (minPrice || maxPrice) {
+        query.price = {};
+        if (minPrice) query.price.$gte = Number(minPrice);
+        if (maxPrice) query.price.$lte = Number(maxPrice);
+      }
+
+      // Text search
+      if (search) {
+        query.name = { $regex: search, $options: 'i' };
+      }
+
+      const [products, total] = await Promise.all([
+        Product.find(query).skip(skip).limit(limit).sort({ createdAt: -1 }),
+        Product.countDocuments(query),
+      ]);
+
+      res.status(200).json({
+        data: products,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      });
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      res.status(500).json({ error: 'Failed to fetch products' });
     }
   },
 
@@ -84,23 +140,6 @@ const ProductController = {
     } catch (err) {
       // Log error message to the console
       console.error('Error: Product cannot be deleted:', err);
-      // Send error message as a JSON response with status 500
-      res.status(500).json({ error: 'An error occurred' });
-    }
-  },
-
-  // Function to get all products
-  async getProducts(req, res) {
-    try {
-      // Find all products in the database
-      const products = await Product.find();
-      // Log success message to the console
-      console.log('Products retrieved successfully.');
-      // Send the retrieved products as a JSON response with status 200
-      res.status(200).json(products);
-    } catch (err) {
-      // Log error message to the console
-      console.error('Error finding products:', err);
       // Send error message as a JSON response with status 500
       res.status(500).json({ error: 'An error occurred' });
     }
