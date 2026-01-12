@@ -26,7 +26,7 @@ const UserController = {
           .status(400)
           .json({ error: 'Password must be at least 6 characters long' });
       }
-
+      // Check if the username already exists in the database
       const existingUser = await User.findOne({ username });
       if (existingUser) {
         return res.status(409).json({ error: 'Username already exists' });
@@ -129,6 +129,14 @@ const UserController = {
       // Validate and prepare the fields to be updated
       if (username) update.username = username;
       if (role) update.role = role;
+
+      // Check if the username is being updated and if it already exists
+      if (username) {
+        const exists = await User.findOne({ username });
+        if (exists && exists._id.toString() !== id) {
+          return res.status(409).json({ error: 'Username already taken' });
+        }
+      }
 
       // Find the user by its ID
       const user = await User.findByIdAndUpdate(id, update, {
