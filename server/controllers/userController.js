@@ -1,26 +1,59 @@
+// Import mongoose from the mongoose package
+const mongoose = require('mongoose');
+// Import bcrypt for password hashing
+const bcrypt = require('bcrypt');
 // Import the User model from the User file
 const User = require('../models/userModel');
 
+const SALT_ROUNDS = 10;
+
 const UserController = {
   // Function to create a new user
-  createUser: async (req, res) => {
-    // Extract username, password, and role from the request body
-    const { username, password, role } = req.body;
-    console.log(`Received request to create user: ${username}`);
-
+  async createUser(req, res) {
     try {
-      // Create a new user instance
-      const user = new User({ username, password, role });
-      // Save the new user to the database
-      await user.save();
-      console.log('User created successfully.');
+      // Extract username, password, and role from the request body
+      const { username, password, role } = req.body;
 
-      // Send a success message as a JSON response with status 201
-      res.status(201).json('User created successfully.');
-    } catch (error) {
-      console.error('An error occurred while creating the user:', error);
-      // Send an error message as a JSON response with status 500
-      res.status(500).json('An error occurred while creating the user.');
+      if (!username || !password) {
+        return res
+          .status(400)
+          .json({ error: 'Username and password are required' });
+      }
+
+      // Check the legth of the password
+      if (password.length < 6) {
+        return res
+          .status(400)
+          .json({ error: 'Password must be at least 6 characters long' });
+      }
+
+      const existingUser = await User.findOne({ username });
+      if (existingUser) {
+        return res.status(400).json({ error: 'Username already exists' });
+      }
+
+      // Hash the password before storing it
+      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+      // Create a new user instance with the extracted data
+      const user = await User.create({
+        username,
+        password: hashedPassword,
+        role: role || 'user',
+      });
+
+      // Log success message to the console
+      console.log('User created successfully.');
+      // Send the created user as a JSON response with status 201
+      res.status(201).json({
+        message: 'User created successfully',
+        user: { id: user._id, username: user.username, role: user.role },
+      });
+    } catch (err) {
+      // Log error message to the console
+      console.error('Error: User cannot be created:', err);
+      // Send error message as a JSON response with status 500
+      res.status(500).json({ error: 'Failed to create user' });
     }
   },
 
