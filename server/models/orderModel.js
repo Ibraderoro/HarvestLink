@@ -14,16 +14,23 @@ const orderSchema = new mongoose.Schema(
     quantity: {
       type: Number,
       required: [true, 'An order must have a quantity'],
+      min: [1, 'Quantity must be at least 1'],
+      validate: {
+        validator: Number.isInteger,
+        message: 'Quantity must be an integer',
+      },
     },
     // Define the buyer field with type String and a required validation message
     buyer: {
-      type: String,
-      default: 'guest',
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'An order must have a buyer'],
     },
-    // Define the orderDate field with type Date and a default value of current date
-    orderDate: {
-      type: Date,
-      default: Date.now,
+    // Define the status field with type String and a default value of 'guest'
+    status: {
+      type: String,
+      enum: ['pending', 'shipped', 'delivered', 'cancelled'],
+      default: 'pending',
     },
   },
   { timestamps: true }

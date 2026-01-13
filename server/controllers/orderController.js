@@ -50,7 +50,7 @@ const OrderController = {
       const [order] = await Order.create(
         [
           {
-            productId,
+            productId: productId,
             quantity,
             buyer: userId,
           },
