@@ -83,7 +83,9 @@ const ProductController = {
 
       const { minPrice, maxPrice, search } = req.query;
 
-      const query = {};
+      const query = {
+        isActive: true, // enforce soft-delete
+      };
 
       // Price filtering
       if (minPrice || maxPrice) {
@@ -92,9 +94,9 @@ const ProductController = {
         if (maxPrice) query.price.$lte = Number(maxPrice);
       }
 
-      // Text search
+      // Text search (uses MongoDB text index)
       if (search) {
-        query.name = { $regex: search, $options: 'i' };
+        query.$text = { $search: search };
       }
 
       const [products, total] = await Promise.all([
